@@ -1,9 +1,10 @@
 <?php
 
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\Administrador;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,21 +31,23 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'username' => ['required', 'string', 'max:255', 'unique:administradores'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+        // Crear el administrador
+        $admin = Administrador::create([
+            'username' => $request->username,
+            'password_hash' => Hash::make($request->password),
         ]);
 
-        event(new Registered($user));
+        // Llamar al evento de registrado
+        event(new Registered($admin));
 
-        Auth::login($user);
+        // Iniciar sesión con el guard 'admin' para el administrador
+        Auth::guard('admin')->login($admin);
 
-        return redirect(route('dashboard', absolute: false));
+        // Redirigir al dashboard del administrador
+        return redirect()->route('admin.dashboard');
     }
 }

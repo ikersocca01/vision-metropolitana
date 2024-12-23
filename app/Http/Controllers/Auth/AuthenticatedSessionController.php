@@ -24,11 +24,19 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->authenticate();
+        // Cambiar el guard a 'admin' para usar el modelo Administrador
+        if (Auth::guard('admin')->attempt($request->only('username', 'password_hash'), $request->filled('remember'))) {
+            // Regenerar la sesión después de un login exitoso
+            $request->session()->regenerate();
 
-        $request->session()->regenerate();
+            // Redirigir a la página de dashboard del administrador (ajusta la ruta según corresponda)
+            return redirect()->intended(route('admin.dashboard', absolute: false));
+        }
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Si la autenticación falla, redirigir con un mensaje de error
+        return back()->withErrors([
+            'email' => 'Las credenciales proporcionadas no coinciden con nuestros registros.',
+        ]);
     }
 
     /**
@@ -36,12 +44,14 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('web')->logout();
+        // Cerrar sesión con el guard 'admin'
+        Auth::guard('admin')->logout();
 
+        // Invalidar la sesión y regenerar el token para evitar ataques CSRF
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
+        // Redirigir a la página principal después de cerrar sesión
         return redirect('/');
     }
 }
